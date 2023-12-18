@@ -1,5 +1,5 @@
 import base64
-import io
+import io, os
 
 import cv2
 import matplotlib.cm as cm
@@ -11,7 +11,7 @@ from IPython.display import Image
 from PIL import Image
 from tensorflow import keras
 
-from app.utilities import cam_models
+from utilities import cam_models
 
 
 def save_heatmap(heatmap, output_path="heatmap.png"):
@@ -28,6 +28,7 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
     return image_array
 
 def load_model_from_gcs(bucket_name: str, model_path: str):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./app/credentials/credentials.json"
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
     blob = storage.Blob(model_path, bucket)

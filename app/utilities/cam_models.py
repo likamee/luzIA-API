@@ -10,7 +10,9 @@ metrics = [
 
 def load_saved_model(model_path):
     """Load the saved model from the specified path."""
-    return load_model(model_path)
+    custom_objects = {'global_average_pooling': global_average_pooling}
+    return load_model(model_path, custom_objects=custom_objects, compile=True, safe_mode=False)
+
 
 
 def global_average_pooling(x):

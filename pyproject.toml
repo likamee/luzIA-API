@@ -4,16 +4,16 @@ version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "luzia_api"}]
+packages = [{include = "app"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.10"
+python = ">=3.9,<3.11"
 matplotlib = "^3.5.2"
 pandas = "^1.4.3"
 opencv-python = "^4.6.0.66"
 scikit-image = "^0.19.3"
 scikit-learn = "^1.1.2"
-tensorflow-gpu = "2.7.0"
+tensorflow = "2.15.0"
 python-dotenv = "^0.20.0"
 fastapi = "^0.68.1"
 uvicorn = "^0.15.0"
