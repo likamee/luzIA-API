@@ -27,8 +27,7 @@ async def predict(file: UploadFile = File(...)):
         # Use the get_img_array function to process the image
         image = get_img_array(temp.name, (299, 299))
 
-        # Remove the temporary file
-        os.unlink(temp.name)
+
 
     predictions = evaluate_models(models, image)
 
@@ -44,8 +43,10 @@ async def predict(file: UploadFile = File(...)):
         response[model] = {}  # Initialize the nested dictionary for the current model
         response[model]['prediction'] = predictions[idx][0].tolist()
         if predictions[idx][0][1] > 0.8:
-            response[model]['cam'] = get_cam(models[idx], image)
+            response[model]['cam'] = get_cam(models[idx], image, temp.name)
         else:
             response[model]['cam'] = None
+
+    os.unlink(temp.name)
 
     return response

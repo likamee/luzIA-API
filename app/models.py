@@ -40,37 +40,39 @@ def evaluate_models(models, image_array: np.ndarray):
     predictions = [model.predict(image_array) for model in models]
     return predictions
 
-def superimpose_gradcam(img, heatmap, cam_path="cam.jpg", alpha=0.4):
-    preprocess_input = keras.applications.xception.preprocess_input
-    img = preprocess_input(img)
+def superimpose_gradcam(image_path, heatmap, alpha=0.4, cam_path="cam.jpg"):
+    # Load the original image
+    original_img = cv2.imread(image_path)
+    original_img = np.clip(original_img, 0, 255).astype(np.uint8)  # Ensure values are still in the range [0, 255]
 
-    heatmap = heatmap / np.max(heatmap)
+    heatmap1 = heatmap - np.min(heatmap)
+    heatmap1 = heatmap1 / np.ptp(heatmap1)
 
     # Rescale heatmap to a range 0-255
-    heatmap = np.uint8(255 * cv2.resize(heatmap, (img.shape[2], img.shape[1])))
+    heatmap1 = np.uint8(255 * cv2.resize(heatmap1, (original_img.shape[0], original_img.shape[1])))
 
     # Use jet colormap to colorize heatmap
     jet = cm.get_cmap("jet")
 
     # Use RGB values of the colormap
     jet_colors = jet(np.arange(256))[:, :3]
-    jet_heatmap = jet_colors[heatmap]
+    jet_heatmap = jet_colors[heatmap1]
 
     # Create an image with RGB colorized heatmap
     jet_heatmap = keras.preprocessing.image.array_to_img(jet_heatmap)
     jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
 
-    img_processed = (img[0] + 1) * 127.5
+    superimposed_img = jet_heatmap * alpha + original_img
+    #superimposed_img = (jet_heatmap * alpha) + (original_img * (1 - alpha))
 
-    # Superimpose the heatmap on original image
-    superimposed_img = jet_heatmap * alpha + img
-    # squeeze() removes the batch dimension
-    superimposed_img = (jet_heatmap * alpha) + (img_processed * (1 - alpha))
+    # Ensure the resulting image is still in the range [0, 255]
     superimposed_img = np.clip(superimposed_img, 0, 255).astype(np.uint8)
 
-    # Save the superimposed image
+    superimposed_img_rgb = cv2.cvtColor(superimposed_img, cv2.COLOR_BGR2RGB)
+
+    # Save the superimposed image in JPEG format
     with io.BytesIO() as buffer:
-        img_pil = keras.preprocessing.image.array_to_img(superimposed_img)
+        img_pil = keras.preprocessing.image.array_to_img(superimposed_img_rgb)
         img_pil.save(buffer, format='JPEG')
         buffer.seek(0)
         superimposed_image = buffer.getvalue()
@@ -108,30 +110,21 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None
     # with regard to the output feature map of the last conv layer
     grads = tape.gradient(class_channel, last_conv_layer_output)
 
-    # This is a vector where each entry is the mean intensity of the gradient
-    # over a specific feature map channel
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
-    # We multiply each channel in the feature map array
-    # by "how important this channel is" with regard to the top predicted class
-    # then sum all the channels to obtain the heatmap class activation
     last_conv_layer_output = last_conv_layer_output[0]
     heatmap = last_conv_layer_output @ pooled_grads[..., tf.newaxis]
     heatmap = tf.squeeze(heatmap)
 
-
-    # For visualization purpose, we will also normalize the heatmap between 0 & 1
-    heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
-
     return heatmap.numpy()
 
 
-def get_cam(model, image):
+def get_cam(model, image, img_path):
 
     # Generate class activation heatmap
     heatmap = make_gradcam_heatmap(image, model, "block5_conv3")
 
-    img_bytes = superimpose_gradcam(image, heatmap)
+    img_bytes = superimpose_gradcam(img_path, heatmap)
 
     # Save the image to a BytesIO buffer and encode it as a base64 string
     img_base64 = base64.b64encode(img_bytes).decode("utf-8")
