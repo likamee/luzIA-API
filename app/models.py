@@ -43,6 +43,8 @@ def evaluate_models(models, image_array: np.ndarray):
 def superimpose_gradcam(image_path, heatmap, alpha=0.4, cam_path="cam.jpg"):
     # Load the original image
     original_img = cv2.imread(image_path)
+    # resize the original image to the size of the heatmap
+    original_img = cv2.resize(original_img, (299, 299))
     original_img = np.clip(original_img, 0, 255).astype(np.uint8)  # Ensure values are still in the range [0, 255]
 
     heatmap1 = heatmap - np.min(heatmap)
