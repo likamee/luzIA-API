@@ -36,9 +36,9 @@ def load_model_from_gcs(bucket_name: str, model_path: str):
     blob.download_to_filename(local_model_path)
     return cam_models.load_saved_model(local_model_path)
 
-def evaluate_models(models, image_array: np.ndarray):
-    predictions = [model.predict(image_array) for model in models]
-    return predictions
+def evaluate_model(model, image_array: np.ndarray):
+    prediction = model.predict(image_array)
+    return prediction
 
 def superimpose_gradcam(image_path, heatmap, alpha=0.4, cam_path="cam.jpg"):
     # Load the original image
