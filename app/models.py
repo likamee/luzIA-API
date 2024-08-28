@@ -1,5 +1,6 @@
 import base64
-import io, os
+import io
+import os
 
 import cv2
 import matplotlib.cm as cm
@@ -10,14 +11,13 @@ from google.cloud import storage
 from IPython.display import Image
 from PIL import Image
 from tensorflow import keras
-
 from utilities import cam_models
 
 
 def save_heatmap(heatmap, output_path="heatmap.png"):
-    plt.imshow(heatmap, cmap='jet')
-    plt.axis('off')
-    plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
+    plt.imshow(heatmap, cmap="jet")
+    plt.axis("off")
+    plt.savefig(output_path, bbox_inches="tight", pad_inches=0)
 
 
 def preprocess_image(image: Image.Image) -> np.ndarray:
@@ -27,8 +27,10 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
     image_array = np.expand_dims(image_array, axis=0)
     return image_array
 
+
 def load_model_from_gcs(bucket_name: str, model_path: str):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./app/credentials/credentials.json"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./credentials/credentials.json"
+    print(f"Downloading model from {bucket_name}/{model_path}")
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
     blob = storage.Blob(model_path, bucket)
@@ -36,22 +38,28 @@ def load_model_from_gcs(bucket_name: str, model_path: str):
     blob.download_to_filename(local_model_path)
     return cam_models.load_saved_model(local_model_path)
 
+
 def evaluate_model(model, image_array: np.ndarray):
     prediction = model.predict(image_array)
     return prediction
+
 
 def superimpose_gradcam(image_path, heatmap, alpha=0.4, cam_path="cam.jpg"):
     # Load the original image
     original_img = cv2.imread(image_path)
     # resize the original image to the size of the heatmap
     original_img = cv2.resize(original_img, (299, 299))
-    original_img = np.clip(original_img, 0, 255).astype(np.uint8)  # Ensure values are still in the range [0, 255]
+    original_img = np.clip(original_img, 0, 255).astype(
+        np.uint8
+    )  # Ensure values are still in the range [0, 255]
 
     heatmap1 = heatmap - np.min(heatmap)
     heatmap1 = heatmap1 / np.ptp(heatmap1)
 
     # Rescale heatmap to a range 0-255
-    heatmap1 = np.uint8(255 * cv2.resize(heatmap1, (original_img.shape[0], original_img.shape[1])))
+    heatmap1 = np.uint8(
+        255 * cv2.resize(heatmap1, (original_img.shape[0], original_img.shape[1]))
+    )
 
     # Use jet colormap to colorize heatmap
     jet = cm.get_cmap("jet")
@@ -65,7 +73,7 @@ def superimpose_gradcam(image_path, heatmap, alpha=0.4, cam_path="cam.jpg"):
     jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
 
     superimposed_img = jet_heatmap * alpha + original_img
-    #superimposed_img = (jet_heatmap * alpha) + (original_img * (1 - alpha))
+    # superimposed_img = (jet_heatmap * alpha) + (original_img * (1 - alpha))
 
     # Ensure the resulting image is still in the range [0, 255]
     superimposed_img = np.clip(superimposed_img, 0, 255).astype(np.uint8)
@@ -75,7 +83,7 @@ def superimpose_gradcam(image_path, heatmap, alpha=0.4, cam_path="cam.jpg"):
     # Save the superimposed image in JPEG format
     with io.BytesIO() as buffer:
         img_pil = keras.preprocessing.image.array_to_img(superimposed_img_rgb)
-        img_pil.save(buffer, format='JPEG')
+        img_pil.save(buffer, format="JPEG")
         buffer.seek(0)
         superimposed_image = buffer.getvalue()
 

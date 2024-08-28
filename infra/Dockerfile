@@ -29,22 +29,18 @@ ENV LANG pt_BR.UTF-8 \
   LC_ALL pt_BR.UTF-8
 
 # COPY EVERYTING FROM THE CURRENT DIRECTORY TO THE WORKDIR
-COPY ./pyproject.toml ./
-COPY ./poetry.lock ./
-COPY ./app/ ./app
-COPY ./app/boot.sh ./app/boot.sh
-COPY ./.env ./app/.env
+COPY ./pyproject.toml ./poetry.lock ./app/ ./app/boot.sh ./.env /home/$USER/app/
+COPY ./credentials.json /home/$USER/app/credentials/
 
-# Create .env file
-RUN printenv | grep -v "no_proxy" >> ./app/.env
+WORKDIR /home/$USER/app
 
 RUN poetry install
 
-RUN chmod +x ./app/boot.sh
+RUN chmod +x ./boot.sh
 
 RUN chown -R $USER:$USER /home/$USER
 USER $USER
 
-WORKDIR /home/$USER/app
+
 
 ENTRYPOINT ["sh", "./boot.sh"]
